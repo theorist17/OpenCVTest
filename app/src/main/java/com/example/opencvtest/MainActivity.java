@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
                 connect();
             }
         });
+        //testing
 
         graphButton = (ImageButton)findViewById(R.id.graphButton);
         exerciseButton = (ImageButton)findViewById(R.id.exercizeButton);
