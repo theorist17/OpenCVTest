@@ -8,6 +8,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 // Socket programming
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
@@ -27,13 +31,16 @@ import android.view.View.OnClickListener;
 import android.support.v4.app.ActivityCompat;
 import android.Manifest;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private Socket client;
-    private static final String ipadres = "175.113.152.102";
-    private static final int portnumber = 17171;
-    private PrintWriter printwriter;
+    private static final String serverName = "175.113.152.102";
+    private static final int serverPort = 17171;
+    private InputStream is;
     private boolean connection;
     private TextView tvTest;
     private Button connect;
@@ -61,11 +68,10 @@ public class MainActivity extends AppCompatActivity {
                 connect();
             }
         });
-        //testing
 
-        graphButton = (ImageButton)findViewById(R.id.graphButton);
-        exerciseButton = (ImageButton)findViewById(R.id.exercizeButton);
-        accountButton = (ImageButton)findViewById(R.id.accountButton);
+        graphButton = findViewById(R.id.graphButton);
+        exerciseButton = findViewById(R.id.exercizeButton);
+        accountButton = findViewById(R.id.accountButton);
 
         mainFrag = new MainFragment();
 
@@ -105,13 +111,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
+                    Log.d("socket", "connecting " + serverName + ' ' + serverPort);
+                    client = new Socket(serverName, serverPort);
+                    is = client.getInputStream();
 
-                    client = new Socket(ipadres, portnumber);
-
-                    printwriter = new PrintWriter(client.getOutputStream(), true);
-                    printwriter.write("HI "); // write the message to output stream
-                    printwriter.flush();
-                    printwriter.close();
+                    // Connected
                     connection = true;
                     Log.d("socket", "connected " + connection);
 
@@ -126,6 +130,101 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                     }
+
+                    // Receive from server
+                    // Entering in the middle of stream
+                    char ch;
+                    byte[] buffer = new byte[1024];
+                    int numRead, numToRead;
+                    StringBuilder lenString = new StringBuilder();
+                    StringBuilder dataString = new StringBuilder();
+
+                    // Entering in the middle of stream
+                    try {
+                        while(true) {
+                            ch = (char) is.read();
+                            while ('0' <= ch && ch <= '9') { // digit sequence
+                                lenString.append(ch);
+                                ch = (char) is.read();
+                            }
+                            if(ch=='\n'){//ending with line feed
+                                //Log.d("LENG", lenString.toString());
+                                numToRead = Integer.parseInt(lenString.toString());
+                                numRead = is.read(buffer, 0, numToRead);
+
+                                if(numRead!= numToRead){
+                                    Log.d("socket", "Failed to locate first position to read.");
+                                    try {
+                                        client.close();
+                                        connection = false;
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                                // Fetching buffer into string buffer
+                                dataString.delete(0, dataString.length());
+                                for (int i = 0 ; i < numRead; i++){
+                                    dataString.append((char)buffer[i]);
+                                }
+                                //Log.d("DATA", dataString.toString());
+
+                                break;
+                            } else {
+                                lenString.delete(0, lenString.length());
+                            }
+                        }
+                    } catch (IOException e){
+                        Log.d("socket", "An input stream error on first read.");
+                    }
+
+                    // Parse json data
+                    lenString.delete(0, lenString.length());
+                    JSONObject data;
+                    while(connection){
+                        ch = (char) is.read();
+                        while(ch!='\n'){
+                            lenString.append(ch);
+                            ch = (char) is.read();
+                        }
+
+                        //Log.d("LENG", lenString.toString());
+                        numToRead = Integer.parseInt(lenString.toString());
+                        numRead = is.read(buffer, 0, numToRead);
+                        lenString.delete(0, lenString.length());
+
+                        if(numRead!= numToRead){
+                            Log.d("socket", "The parser of JSON didn't read enough bytes.");
+                            try {
+                                client.close();
+                                connection = false;
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        // Fetching buffer into string buffer
+                        dataString.delete(0, dataString.length());
+                        for (int i = 0 ; i < numRead; i++){
+                            dataString.append((char)buffer[i]);
+                        }
+                        //Log.d("DATA", dataString.toString());
+
+                        // json paring
+                        try {
+                            data = new JSONObject(dataString.toString());
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    // closing connection
+                    try {
+                        client.close();
+                        connection = false;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
                 catch (UnknownHostException e2){
                     MainActivity.this.runOnUiThread(new Runnable() {
@@ -136,13 +235,13 @@ public class MainActivity extends AppCompatActivity {
                     });
 
                 }
-                catch (IOException e1) {
+                catch (IOException e) {
                     Log.d("socket", "IOException");
-                    e1.printStackTrace();
+                    e.printStackTrace();
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
                             //Do your UI operations like dialog opening or Toast here
-                            Toast.makeText(getApplicationContext(), "Error Occured"+ "  " + ipadres, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), "Error Occured"+ "  " + serverName, Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
