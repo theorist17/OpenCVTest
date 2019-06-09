@@ -1,6 +1,8 @@
 package com.example.opencvtest;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -8,18 +10,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 // Socket programming
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
 // IO
-import java.io.PrintWriter;
 import java.io.IOException;
 
 // utilities and widget
+import android.util.Base64;
 import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -31,9 +30,20 @@ import android.view.View.OnClickListener;
 import android.support.v4.app.ActivityCompat;
 import android.Manifest;
 
+// json
 import org.json.JSONException;
 import org.json.JSONObject;
 
+// opencv
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,6 +60,16 @@ public class MainActivity extends AppCompatActivity {
     ImageButton graphButton;
     ImageButton exerciseButton;
     ImageButton accountButton;
+
+    graphFragment graphFragment;
+
+    Mat received;
+    static {
+        if (!OpenCVLoader.initDebug()){
+            Log.e("opencv", "err");
+        }
+       // System.loadLibrary("opencv_java");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,8 +100,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view){
 
-                mainFrag = new graphFragment();
-
+                graphFragment = new graphFragment();
+                mainFrag = graphFragment;
                 switchFrag();
             }
         });
@@ -134,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
                     // Receive from server
                     // Entering in the middle of stream
                     char ch;
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[10485760];
                     int numRead, numToRead;
                     StringBuilder lenString = new StringBuilder();
                     StringBuilder dataString = new StringBuilder();
@@ -150,16 +170,13 @@ public class MainActivity extends AppCompatActivity {
                             if(ch=='\n'){//ending with line feed
                                 //Log.d("LENG", lenString.toString());
                                 numToRead = Integer.parseInt(lenString.toString());
-                                numRead = is.read(buffer, 0, numToRead);
+                                numRead = 0;
 
-                                if(numRead!= numToRead){
-                                    Log.d("socket", "Failed to locate first position to read.");
-                                    try {
-                                        client.close();
-                                        connection = false;
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
+                                while(numToRead!=0){ //여기서 numToRead가 한 삼십만바이트면 십만바이트만 읽고 반환하기도 함.
+                                    numRead = is.read(buffer, numRead, numToRead); //numRead
+                                    numToRead -= numRead;
+                                    if (numRead < 0)
+                                        break;
                                 }
 
                                 // Fetching buffer into string buffer
@@ -180,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
 
                     // Parse json data
                     lenString.delete(0, lenString.length());
-                    JSONObject data;
+                    JSONObject data = null;
                     while(connection){
                         ch = (char) is.read();
                         while(ch!='\n'){
@@ -190,17 +207,14 @@ public class MainActivity extends AppCompatActivity {
 
                         //Log.d("LENG", lenString.toString());
                         numToRead = Integer.parseInt(lenString.toString());
-                        numRead = is.read(buffer, 0, numToRead);
+                        numRead = 0;
                         lenString.delete(0, lenString.length());
 
-                        if(numRead!= numToRead){
-                            Log.d("socket", "The parser of JSON didn't read enough bytes.");
-                            try {
-                                client.close();
-                                connection = false;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+                        while(numToRead!=0){ //여기서 numToRead가 한 삼십만바이트면 십만바이트만 읽고 반환하기도 함.
+                            numRead = is.read(buffer, numRead, numToRead); //numRead
+                            numToRead -= numRead;
+                            if (numRead < 0)
+                                break;
                         }
 
                         // Fetching buffer into string buffer
@@ -215,6 +229,26 @@ public class MainActivity extends AppCompatActivity {
                             data = new JSONObject(dataString.toString());
                         } catch (JSONException e) {
                             e.printStackTrace();
+                        }
+
+                        // draw frame --> inside graphFragment
+                        if(graphFragment.isCVReady()){
+                            byte[] bitmapdata = new byte[0];
+                            try {
+                                bitmapdata = Base64.decode(data.getString("img"), Base64.DEFAULT);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            //here the data coming from server is assumed in Base64
+                            //if you are sending bytes in plain string you can directly convert it to byte array
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
+
+                            //android OpenCv function
+                            if (bitmap==null){
+                                Log.e("opencv", "Couldn't decode bitmap.");
+                            }
+                            org.opencv.android.Utils.bitmapToMat(bitmap,received);
+                            graphFragment.updateGraph(received);
                         }
                     }
 
@@ -250,6 +284,8 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+
+
     public void switchFrag(){
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fm.beginTransaction();
@@ -264,4 +300,11 @@ public class MainActivity extends AppCompatActivity {
         fragmentTransaction.replace(R.id.main_fragment, mainFrag);
         fragmentTransaction.commit();
     }
+
+    public boolean toggleConnection(){
+        connection = !connection;
+        return connection;
+    }
+
+
 }
