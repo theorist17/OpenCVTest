@@ -133,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Log.d("socket", "connecting " + serverName + ' ' + serverPort);
                     client = new Socket(serverName, serverPort);
+                    is = client.getInputStream();
 
                     // Connected
                     connection = true;
@@ -154,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
                     // Entering in the middle of stream
                     char ch;
                     byte[] buffer = new byte[10485760];
-                    int numRead, numToRead;
+                    int numRead, sumRead, numToRead;
                     StringBuilder lenString = new StringBuilder();
                     StringBuilder dataString = new StringBuilder();
 
@@ -171,16 +172,18 @@ public class MainActivity extends AppCompatActivity {
                                 numToRead = Integer.parseInt(lenString.toString());
                                 numRead = 0;
 
+                                sumRead = 0;
                                 while(numToRead!=0){ //여기서 numToRead가 한 삼십만바이트면 십만바이트만 읽고 반환하기도 함.
                                     numRead = is.read(buffer, numRead, numToRead); //numRead
                                     numToRead -= numRead;
+                                    sumRead += numRead;
                                     if (numRead < 0)
                                         break;
                                 }
 
                                 // Fetching buffer into string buffer
                                 dataString.delete(0, dataString.length());
-                                for (int i = 0 ; i < numRead; i++){
+                                for (int i = 0 ; i < sumRead; i++){
                                     dataString.append((char)buffer[i]);
                                 }
                                 //Log.d("DATA", dataString.toString());
@@ -209,16 +212,18 @@ public class MainActivity extends AppCompatActivity {
                         numRead = 0;
                         lenString.delete(0, lenString.length());
 
+                        sumRead = 0;
                         while(numToRead!=0){ //여기서 numToRead가 한 삼십만바이트면 십만바이트만 읽고 반환하기도 함.
                             numRead = is.read(buffer, numRead, numToRead); //numRead
                             numToRead -= numRead;
+                            sumRead += numRead;
                             if (numRead < 0)
                                 break;
                         }
 
                         // Fetching buffer into string buffer
                         dataString.delete(0, dataString.length());
-                        for (int i = 0 ; i < numRead; i++){
+                        for (int i = 0 ; i < sumRead; i++){
                             dataString.append((char)buffer[i]);
                         }
                         //Log.d("DATA", dataString.toString());
@@ -231,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         // draw frame --> inside graphFragment
-                        if(graphFragment.isCVReady()){
+                        if(graphFragment.isCVReady()) {
                             byte[] bitmapdata = new byte[0];
                             try {
                                 bitmapdata = Base64.decode(data.getString("img"), Base64.DEFAULT);
@@ -243,12 +248,15 @@ public class MainActivity extends AppCompatActivity {
                             Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
 
                             //android OpenCv function
-                            if (bitmap==null){
+                            if (bitmap == null) {
                                 Log.e("opencv", "Couldn't decode bitmap.");
                             }
-                            received = new Mat (bitmap.getWidth(), bitmap.getHeight(), CvType.CV_8UC3);
-                            org.opencv.android.Utils.bitmapToMat(bitmap,received);
-                            graphFragment.updateGraph(received);
+
+                            //received = new Mat(bitmap.getWidth(), bitmap.getHeight(), CvType.CV_8UC3);
+                            //org.opencv.android.Utils.bitmapToMat(bitmap, received);
+
+                            //graphFragment.updateGraph(received);
+                            graphFragment.updateGraph(bitmap);
                         }
                     }
 
@@ -283,8 +291,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
-
-
 
     public void switchFrag(){
         FragmentManager fm = getSupportFragmentManager();

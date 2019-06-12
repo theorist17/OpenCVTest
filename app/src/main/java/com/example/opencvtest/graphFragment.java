@@ -133,13 +133,21 @@ public class graphFragment extends android.support.v4.app.Fragment {
 
 
 
-        public boolean updateGraph(Mat src){
+    public boolean updateGraph(Mat src){
         if (ivGraph == null)
             return false;
 
-        Bitmap bmp = Bitmap.createBitmap(src.cols(), src.rows(), Bitmap.Config.ARGB_8888);
+        Bitmap bmp = Bitmap.createBitmap(src.cols(), src.rows(), Bitmap.Config.RGB_565);
         Utils.matToBitmap(src, bmp);
         ivGraph.setImageBitmap(bmp);
+
+        return true;
+    }
+    public boolean updateGraph(Bitmap src){
+        if (ivGraph == null)
+            return false;
+
+        ivGraph.setImageBitmap(src);
 
         return true;
     }
