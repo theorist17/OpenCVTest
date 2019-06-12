@@ -3,6 +3,7 @@ package com.example.opencvtest;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -110,7 +111,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 mainFrag = new exerciseFragment();
-
                 switchFrag();
             }
         });
@@ -133,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Log.d("socket", "connecting " + serverName + ' ' + serverPort);
                     client = new Socket(serverName, serverPort);
-                    is = client.getInputStream();
 
                     // Connected
                     connection = true;
@@ -247,6 +246,7 @@ public class MainActivity extends AppCompatActivity {
                             if (bitmap==null){
                                 Log.e("opencv", "Couldn't decode bitmap.");
                             }
+                            received = new Mat (bitmap.getWidth(), bitmap.getHeight(), CvType.CV_8UC3);
                             org.opencv.android.Utils.bitmapToMat(bitmap,received);
                             graphFragment.updateGraph(received);
                         }
