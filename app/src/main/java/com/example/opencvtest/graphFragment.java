@@ -1,6 +1,7 @@
 package com.example.opencvtest;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -46,7 +47,7 @@ public class graphFragment extends android.support.v4.app.Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_graph, container, false);
-        ivGraph = view.findViewById(R.id.realtimeGraph);
+        //ivGraph = view.findViewById(R.id.realtimeGraph);
 
         title = (TextView)view.findViewById(R.id.titleText);
         mRecyclerView = (RecyclerView) view.findViewById(R.id.recyclerView);
@@ -69,7 +70,8 @@ public class graphFragment extends android.support.v4.app.Fragment {
                             (
                                     DataNoteInformation.id[i],
                                     DataNoteInformation.textArray[i],
-                                    DataNoteInformation.dateArray[i]
+                                    DataNoteInformation.dateArray[i],
+                                    DataNoteInformation.imgArray[i]
                             ));
         }
 
@@ -113,6 +115,7 @@ public class graphFragment extends android.support.v4.app.Fragment {
         @Override
         public void onBindViewHolder(ListAdapter.ViewHolder holder, final int position) {
 
+            holder.cardImage.setImageResource(dataList.get(position).getImg());
             holder.textViewText.setText(dataList.get(position).getText());
             holder.textViewComment.setText(dataList.get(position).getComment());
             holder.textViewDate.setText(dataList.get(position).getDate());
@@ -120,7 +123,10 @@ public class graphFragment extends android.support.v4.app.Fragment {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Toast.makeText(getActivity(), "Item " + position + " is clicked.", Toast.LENGTH_SHORT).show();
+                    Intent intent =  new Intent(getActivity(), Realtime.class);
+                    intent.putExtra("qq",1);
+                    startActivity(intent);
+
                 }
             });
         }
@@ -131,70 +137,49 @@ public class graphFragment extends android.support.v4.app.Fragment {
         }
     }
 
+//    @Override
+//    public void onResume() {;
+//        super.onResume();
+//        if(OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this.getActivity(), mOpenCVLoaderCallBack))
+//            return;
+//        else
+//            return;
+//    }
 
+//    private BaseLoaderCallback mOpenCVLoaderCallBack = new BaseLoaderCallback(this.getActivity()) {
+//        @Override
+//        public void onManagerConnected(int status) {
+//            switch (status) {
+//                case LoaderCallbackInterface.SUCCESS:
+//                {
+//                    //System.loadLibrary("opencv_java");
+//                    Log.i("opencv", "OpenCV loaded successfully");
+//
+//                    Mat test = Mat.zeros(100,400, CvType.CV_8UC3);
+//                    Imgproc.putText(test, "hi there ;)", new Point(30,80), Core.FONT_HERSHEY_SCRIPT_SIMPLEX, 2.2, new Scalar(200,200,0),2);
+//                    updateGraph(test);
+//
+//                    cvLoaded = true;
+//                } break;
+//                default:
+//                {
+//                    super.onManagerConnected(status);
+//                } break;
+//
+//            }
+//        }
+//    };
 
-    public boolean updateGraph(Mat src){
-        if (ivGraph == null)
-            return false;
+//    @Override
+//    public void onPause() {;
+//        super.onPause();
+//        ((MainActivity)getActivity()).toggleConnection();
+//        cvLoaded = false;
+//    }
 
-        Bitmap bmp = Bitmap.createBitmap(src.cols(), src.rows(), Bitmap.Config.RGB_565);
-        Utils.matToBitmap(src, bmp);
-        ivGraph.setImageBitmap(bmp);
-
-        return true;
-    }
-    public boolean updateGraph(Bitmap src){
-        if (ivGraph == null)
-            return false;
-
-        ivGraph.setImageBitmap(src);
-
-        return true;
-    }
-
-    @Override
-    public void onResume() {;
-        super.onResume();
-        if(OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this.getActivity(), mOpenCVLoaderCallBack))
-            return;
-        else
-            return;
-    }
-
-    private BaseLoaderCallback mOpenCVLoaderCallBack = new BaseLoaderCallback(this.getActivity()) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    //System.loadLibrary("opencv_java");
-                    Log.i("opencv", "OpenCV loaded successfully");
-
-                    Mat test = Mat.zeros(100,400, CvType.CV_8UC3);
-                    Imgproc.putText(test, "hi there ;)", new Point(30,80), Core.FONT_HERSHEY_SCRIPT_SIMPLEX, 2.2, new Scalar(200,200,0),2);
-                    updateGraph(test);
-
-                    cvLoaded = true;
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-
-            }
-        }
-    };
-
-    @Override
-    public void onPause() {;
-        super.onPause();
-        ((MainActivity)getActivity()).toggleConnection();
-        cvLoaded = false;
-    }
-
-    public boolean isCVReady(){
-        return cvLoaded;
-    }
+//    public boolean isCVReady(){
+//        return cvLoaded;
+//    }
 
 
 }
