@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 public class Realtime extends AppCompatActivity {
     static {
@@ -59,6 +60,8 @@ public class Realtime extends AppCompatActivity {
     private TextView tvTest;
     private Button connect;
     private Activity thisActivity;
+    ArrayList<Bitmap> bmplist;
+    int downloded = 0;
 
     Mat received;
 
@@ -77,8 +80,18 @@ public class Realtime extends AppCompatActivity {
 //        Imgproc.putText(test, "hi there ;)", new Point(30,80), Core.FONT_HERSHEY_SCRIPT_SIMPLEX, 2.2, new Scalar(200,200,0),2);
 //        updateGraph(test);
 
+        bmplist = new ArrayList<>();
         ActivityCompat.requestPermissions(Realtime.this, new String[]{Manifest.permission.INTERNET},1);
         connect();
+//        Drawable myDrawable = getResources().getDrawable(R.drawable.airplane);
+//        Bitmap bitmap      = ((BitmapDrawable) myDrawable).getBitmap();
+//
+//        ivGraph.setImageBitmap(bitmap);
+
+//        Drawable myDrawable = getResources().getDrawable(R.drawable.airplane);
+//        bitmap      = ((BitmapDrawable) myDrawable).getBitmap();
+        //ivGraph.setImageBitmap(bitmap);
+
 
     }
 
@@ -86,6 +99,15 @@ public class Realtime extends AppCompatActivity {
     public void onResume() {;
         super.onResume();
         connection = true;
+        while(downloded != 1);
+        for(int i = 0 ; i <1 ;i++) {
+            updateGraph(bmplist.get(i));
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -96,6 +118,7 @@ public class Realtime extends AppCompatActivity {
 
 
     public void connect() {
+
         new Thread(new Runnable(){
 
             @Override
@@ -128,6 +151,7 @@ public class Realtime extends AppCompatActivity {
                     int numRead, sumRead, numToRead;
                     StringBuilder lenString = new StringBuilder();
                     StringBuilder dataString = new StringBuilder();
+                    dataString.setLength(1000000);
 
                     // Entering in the middle of stream
                     try {
@@ -229,19 +253,19 @@ public class Realtime extends AppCompatActivity {
 //                        org.opencv.android.Utils.bitmapToMat(bitmap, received);
 //
 //                        updateGraph(received);
-                        Drawable myDrawable = getResources().getDrawable(R.drawable.airplane);
-                        Bitmap anImage      = ((BitmapDrawable) myDrawable).getBitmap();
-                        updateGraph(bitmap);
-                        updateGraph(anImage);
+                        bmplist.add(bitmap);
+                        downloded++;
+                        if (downloded==1)
+                            break;
                     }
 
                     // closing connection
-//                    try {
-//                        client.close();
-//                        connection = false;
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
+                    try {
+                        client.close();
+                        connection = false;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
                 catch (UnknownHostException e2){
 //                    Realtime.this.runOnUiThread(new Runnable() {
@@ -262,7 +286,6 @@ public class Realtime extends AppCompatActivity {
 //                        }
 //                    });
                 }
-
             }
         }).start();
     }
@@ -281,6 +304,9 @@ public class Realtime extends AppCompatActivity {
     public boolean updateGraph(Bitmap bitmap){
         if (ivGraph == null)
             return false;
+
+        //Drawable myDrawable = getResources().getDrawable(R.drawable.airplane);
+        //bitmap      = ((BitmapDrawable) myDrawable).getBitmap();
 
         ivGraph.setImageBitmap(bitmap);
 
